@@ -1,0 +1,15 @@
+#!/bin/sh
+
+exec 2>/dev/null
+
+beep() { for i in $(seq 1 ${1:-1}); do echo -ne '\007'; sleep .1s; done; }
+
+MASTER=$$
+( sleep ${1:-180}  ; beep & exec xmessage -buttons "yum:0,wait:1" -center "tea is done" ) &
+CHILD1=$!
+export CHILD1
+( sleep ${2:-300} ; kill -1 $CHILD1 ;  beep 3 & exec xmessage -buttons "better drink it now" -center "tea is really done" ) &
+CHILD2=$!
+
+wait $CHILD1 && kill -1 $CHILD2
+wait

@@ -1,0 +1,3 @@
+#!/bin/sh
+/usr/bin/sudo /sbin/swapoff -a
+/usr/bin/sudo /sbin/swapon -a

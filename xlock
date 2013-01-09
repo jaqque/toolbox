@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Using feh and xtrlock, obsure and lock the screen
+
+exec > /dev/null
+exec 2> /dev/null
+
+music=`audtool --playback-status`
+
+if [ "_$music" = "_playing" ]; then
+	audtool playback-pause
+fi
+
+feh -Tscreensave $HOME/pix/screensaver &
+pid_feh=$!
+
+xtrlock
+
+if [ "_$music" = "_playing" ]; then
+	audtool playback-pause
+fi
+
+kill -1 $pid_feh

@@ -1,0 +1,10 @@
+#!/bin/sh
+PATH=/usr/local/bin:/usr/bin:/bin
+APGRC=$HOME/.apg/apgrc
+cd $HOME
+
+if [ -f $APGRC ]; then
+	AGP_OPTIONS=`sed -e 's/#.*//' $APGRC`
+fi
+
+apg $AGP_OPTIONS "$@" | column

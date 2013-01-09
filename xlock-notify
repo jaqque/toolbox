@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cat <<EOF | osd_cat -c yellow -O 2 -u red -f -*-terminus-*-r-*-*-32-*-*-*-*-*-*-* -A center -p bottom -d 2
+X+X+X+X
+EOF

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+host=`echo $1 | sed -e 's/.*@\(.*\)/\1/; s/\(.*\):.*/\1/'`
+ping -q -c 2 -i .2 -w 5 $host >/dev/null 2>&1
+return=$?
+case $return in
+	0)	echo $host is up.
+		;;
+	1)	echo Cannot reach $host.
+		;;
+	2)	echo No record for $host.
+		;;
+	*)	echo Error with $host.
+		;;
+esac
+
+exit $return

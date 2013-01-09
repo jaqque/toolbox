@@ -1,0 +1,72 @@
+#!/bin/sh
+# (C) 2013 John H. Robinson, IV <jhriv@sbih.org>
+# Ease manually patching Debian and Ubuntu systems
+
+
+if [ -x `which lsb_release` ]; then
+  case "`lsb_release --id --short`" in
+    Ubuntu) apt=/usr/bin/apt-get  ;;
+    Debian) apt=/usr/bin/aptitude ;;
+    *)      apt=/usr/bin/aptitude ;;
+  esac
+else
+  apt=/usr/bin/aptitude
+fi
+apt=${APT:-$apt}
+
+
+usage() {
+me=`basename $0`
+cat <<EOF
+$me [-u|--upgrade|-f|--full-upgrade|-c|--clean|-h|--help]
+
+  Download updated packages, and optionally install them.
+
+  -u --upgrade
+     Perform aptitude update, skipping downloads
+  -f --full-upgrade -d --dist-upgrade
+     Perform aptitude full-upgrade, skipping downloads
+  -c --clean
+     Clean the package archive
+  -h --help
+     This help
+
+EOF
+}
+
+case `id -u` in
+    0) sudo="" ;;
+    *) sudo=/usr/bin/sudo ;;
+esac
+
+if [ "$2" ]; then
+    usage
+    exit 1
+fi
+
+case "$1" in
+    -c|--clean)    exec $sudo "$apt" clean ;;
+    -u|--upgrade)  exec $sudo "$apt" upgrade ;;
+    -d|--dist-upgrade|-f|--full-upgrade)
+                   exec $sudo "$apt" full-upgrade ;;
+    -h|--help)     usage; exit 0 ;;
+    ?*)            usage; exit 1 ;;
+esac
+
+# Download updates
+$sudo "$apt" update
+
+# No longer want to pause to download updates.
+# read -p 'Press [RETURN] to download updates... ' junk
+$sudo "$apt" --download-only --assume-yes upgrade
+
+read -p 'Press [RETURN] to download full-updates... ' junk
+$sudo "$apt" --download-only --assume-yes full-upgrade
+
+read -p 'Upgrade, Full-upgrade, or Neither? [ufN] ' action
+case $action in
+    u*|U*)       exec $sudo "$apt" upgrade ;;
+    d*|D*|f*|F*) exec $sudo "$apt" full-upgrade ;;
+esac
+
+exit 0

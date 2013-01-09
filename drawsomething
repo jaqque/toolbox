@@ -1,0 +1,89 @@
+#!/bin/sh
+# (C) 2012-03-08
+# John H. Robinson, IV <jaqque@sbih.org>
+#include <gplv2.h>
+# and no later. goddammit.
+
+# should i do this in perl? eh
+
+usage() {
+# here documents require use of leading tabs.
+cat 1>&2 <<- EOF
+	usage: # x x x
+	  # is number of characters in the word
+	  x is the list of candidate characters, spaces optional
+EOF
+}
+
+# gotta have a $1 to have a $2
+if [ -z "$2" ]; then
+    usage
+    exit 1
+fi
+
+word_length=$1;
+shift
+
+# ensure all digits
+if ! echo $word_length | grep -q '^[0-9]*$'; then
+    usage
+    exit 1
+fi
+
+# ensure reasonable length
+if [ $word_length -lt 1 ]; then
+   echo "I don't know any zero length words. Do you?" 1>&2
+   exit 2
+fi
+
+word_length_re="^[a-z]{$word_length}$"
+
+# normalise input by combining all arguments and removing all whitespace
+available_letters=""
+while [ "$1" ]; do
+    available_letters="${available_letters}$1"
+    shift
+done
+available_letters=`echo $available_letters | tr -d ' '`
+
+# ensure our available_letters are actually letters
+if ! echo $available_letters | grep -qi '^[a-z]*$'; then
+    usage
+    exit 1
+fi
+
+# ensure we have enough candidate letters
+if [ $word_length -gt ${#available_letters} ]; then
+    echo "It's very hard to make a $word_length letter word with only" \
+        "${#available_letters} letters." 1>&2
+   exit 2
+fi
+
+# insert newline between each letter
+for i in `seq 1 ${#available_letters}`; do
+    individual_letters="${individual_letters}`echo $available_letters \
+        | head -c $i | tail -c 1`
+"
+done
+
+# count 'em up!
+sorted_letters=`echo -n "$individual_letters" | sort -f | uniq -ic`
+
+# limit number of candidate words; minimise memory usage
+candidate_words="`grep -Ei $word_length_re /usr/share/dict/words \
+    | grep -Ei "^[$available_letters]*$"`"
+
+# remove words with too many of a given letter
+# the pipe spawns a new shell, so echo and display the result
+echo "$sorted_letters" | ( while read count letter; do
+        # iteratively remove words with more of a letter than specified
+        candidate_words=`echo "$candidate_words" \
+            | grep -Evi "${letter}(.*${letter}){$count}"`
+    done
+    # report final list; remove differences in case? (|sort -fu)
+    # assuming there are any words, of course
+    if [ "$candidate_words" ]; then
+        echo "$candidate_words"
+    fi
+)
+
