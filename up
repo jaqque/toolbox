@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# TODO: parse $HOME/.ssh/config, and grab hostnames out of there
+
 host=`echo $1 | sed -e 's/.*@\(.*\)/\1/; s/\(.*\):.*/\1/'`
 ping -q -c 2 -i .2 -w 5 $host >/dev/null 2>&1
 return=$?
