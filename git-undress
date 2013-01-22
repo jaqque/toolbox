@@ -1,0 +1,33 @@
+#!/bin/sh
+
+source="$PWD"
+target="$PWD.git"
+
+# verify we are a git repositoy
+if [ ! -d "$source/.git" ]; then
+  echo 'No git repository found.' 1>&2
+  exit 1
+fi
+
+# verify we have a place to put the new, bare repository
+if [ -e "$target" ]; then
+  echo "$target exists" 1>&2
+  exit 1
+fi
+
+# verify that repo and index is clean
+number_of_dirty_files=`git status --porcelain | wc -l`
+if [ $number_of_dirty_files -gt 0 ]; then
+  echo "$source has uncomitted changes" 1>&2
+  exit 1
+fi
+
+# do it!
+# move repo/.git to repo.git (proper, bare, naming convention)
+mv "$source/.git" "$target"
+# tell git it is a bare repository
+git config --file="$target/config" --bool core.bare true
+
+# remove everything
+# might be hard to do, since it is a $PWD for the parent process
+#rm -rf "$source"
