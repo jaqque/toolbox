@@ -2,18 +2,25 @@
 # (C) 2013 John H. Robinson, IV <jhriv@sbih.org>
 # Ease manually patching Debian and Ubuntu systems
 
-
+release='Unknown'
 if [ -x `which lsb_release` ]; then
-  case "`lsb_release --id --short`" in
-    Ubuntu) apt=/usr/bin/apt-get  ; full_upgrade='dist-upgrade' ;;
-    Debian) apt=/usr/bin/aptitude ; full_upgrade='full-upgrade' ;;
-    *)      apt=/usr/bin/aptitude ; full_upgrade='full-upgrade' ;;
-  esac
-else
-  apt=/usr/bin/aptitude
+  release="`lsb_release --id --short`"
 fi
+
+case $release in
+  Ubuntu) apt=/usr/bin/apt-get  ;;
+  Debian) apt=/usr/bin/aptitude ;;
+  *)      apt=/usr/bin/aptitude ;;
+esac
+
+# $APT environmental variable rules all.
 apt=${APT:-$apt}
 
+case "$apt" in
+  *apt-get)  full_upgrade='dist-upgrade' ;;
+  *aptitude) full_upgrade='full-upgrade' ;;
+  *)         full_upgrade='dist-upgrade' ;;
+esac
 
 usage() {
 me=`basename $0`
