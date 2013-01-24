@@ -3,7 +3,7 @@
 # Ease manually patching Debian and Ubuntu systems
 
 release='Unknown'
-if [ -x `which lsb_release` ]; then
+if [ -x "`which lsb_release`" ]; then
   release="`lsb_release --id --short`"
 fi
 
