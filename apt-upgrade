@@ -23,9 +23,8 @@ case "$apt" in
 esac
 
 usage() {
-me=`basename $0`
 cat <<EOF
-$me [-u|--upgrade|-f|--full-upgrade|-c|--clean|-h|--help]
+${0##*/} [-u|--upgrade|-f|--full-upgrade|-c|--clean|-h|--help]
 
   Download updated packages, and optionally install them.
 
