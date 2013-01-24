@@ -1,0 +1,200 @@
+#!/bin/sh
+
+# Simple and easy.
+DEFAULT_TRACKING_NAME=origin
+DEFAULT_REMOTE_HOST=git-remote
+DEFAULT_REMOTE_PROJECT=.
+
+usage() {
+	fmt <<EOF
+usage: git create [repo]
+
+Creates a remote, bare, repository and a tracking banch for it in the
+(optionally created) local repository.
+
+If a repo is specified, it will be created, initialised, and git flow
+initialised with default values (if git-flow is installed. Which it is,
+right? Right?).
+
+If repo has a .git suffix, a bare repository is made and the git-flow
+portion is skipped (since it makes no sense for a bare repository).
+
+By default, will create the remote repository on $DEFAULT_REMOTE_HOST,
+in the "$DEFAULT_REMOTE_PROJECT" directory (probably \$HOME), and the
+tracking branch will be named $DEFAULT_TRACKING_NAME. Each of these
+can be overriden in ~/.gitconfig. You can use \$remote_name
+environmental variable as well.
+
+EOF
+	# don't want to format the git config samples
+	cat <<EOF
+  git config --global create.host <default_host>
+  git config --global create.path <default_project_directory>
+  git config --global create.track <default_tracking_name>
+EOF
+}
+
+create_local_repo() {
+	name="$1"
+
+	if [ -z "$name" ]; then
+		cat 1>&2 <<-EOF
+	Must specify name of local repository
+	This is an internal function - what did you do?
+EOF
+		exit 1;
+	fi
+
+	verify_directory "$name"
+	
+	if [ ! -d "$name" ]; then
+		# mkdir -p? Must think about it.
+		mkdir "$name" || exit $?
+	fi
+	old_pwd="$PWD"
+	cd "$name" || exit $?
+
+	if [ "$name" = "${name%.git}" ]; then
+		git init
+		command -v git-flow
+		if [ $? -ne 0 ]; then
+			echo "You really should install git flow"
+			echo "https://github.com/nvie/gitflow/wiki/Installation"
+		else
+			git flow init -d
+		fi
+	else
+		# has .git suffix
+		git init --bare
+	fi
+	cd "$old_pwd"; # prevent side effects, no matter how useful
+}
+
+create_remote_repo() {
+	name="$1"
+
+	if [ -z "$name" ]; then
+		cat 1>&2 <<-EOF
+	Must specify name of remote repository
+	This is an internal function - what did you do?
+EOF
+		exit 1;
+	fi
+
+	# get name of remote host
+	# lack of specifying one means we will assume that git-remote
+	# is defined in .ssh/config
+	remote_host=`git config --get create.host`
+	: ${remote_host:=$DEFAULT_REMOTE_HOST}
+
+	# get path of remote project directory
+	# lack of specifying means we will assume $HOME, or whatever
+	# $PWD becomes when ssh'ing in
+	remote_project_directory=`git config --get create.path`
+	: ${remote_host:=$DEFAULT_REMOTE_PROJECT}
+
+	remote_command="exec 2>&1 && cd \"$remote_project_directory\" && git init --bare --quiet \"$name\" && echo \"\$PWD/$name\""
+	remote_result="`ssh $remote_host "$remote_command"`"
+	return_code=$?
+	
+	if [ $return_code -ne 0 ]; then
+		echo "Houston, we have a problem: $remote_result"
+		exit $return_code
+	fi
+
+	remote_repo_path="$remote_result"
+	remote_uri="ssh://$remote_host$remote_repo_path"
+
+	echo "$remote_uri"
+}
+
+create_tracking_branch() {
+	name="$1"
+
+	if [ -z "$name" ]; then
+		cat 1>&2 <<-EOF
+	Must specify location of tracking branch
+	This is an internal function - what did you do?
+EOF
+		exit 1;
+	fi
+
+	# Should already be in the target git repository.
+	# If not, well, I guess we will fail.
+	: ${remote_name:=`git config --get create.track`}
+	: ${remote_name:=$DEFAULT_TRACKING_NAME}
+	git remote add $remote_name "$name"
+	return_code=$?
+	
+	if [ $return_code -ne 0 ]; then
+		cat 1>&2 <<EOF
+Unable to add the remote repository as $remote_name
+Please add the tracking branch manually
+git remote add <name> $remote_uri
+EOF
+		exit $return_code
+	fi
+}
+
+verify_directory() {
+	target="$1"
+	if [ -z "$target" ]; then
+		echo "Internal error: verify_directory requires a directory to verify" 1>&2
+		exit 1
+	fi
+	if [ -e "$target" -a ! -d "$target" ]; then
+		echo "$target: Not a directory" 1>&2
+		exit 1
+	fi
+}
+
+
+# need help? get some
+if [ "$1" = '-h' -o "$1" = '--help' ]; then
+	usage
+	exit 0
+fi
+
+# no other options.
+if [ "$1" != "${1#-}" ]; then
+	usage 1>&2
+	cat 1>&2 <<-EOF
+	
+	use 
+	  ${0##*/} ./$1
+	or
+	  ${0##*/} $PWD/$1
+	if you intended to create a repository
+EOF
+	exit 1
+fi
+
+# If a repository is specified, create it and cd into it.
+# Otherwise, create the remote based off of the current repository
+
+target_repo="$1"
+if [ "$target_repo" ]; then
+	create_local_repo "$target_repo"
+	cd "$target_repo"
+fi
+# http://stackoverflow.com/questions/957928/is-there-a-way-to-get-the-git-root-directory-in-one-command
+# the above doesn't work for bare repos.
+
+is_bare=`git config --get --bool core.bare`
+if [ $? -ne 0 ]; then # we are not even in a git repo.
+	echo 'Y U NO in git repo?' 1>&2
+	exit 1
+fi
+if [ $is_bare = true ]; then
+	current_repo="$PWD"
+else
+	current_repo="`git rev-parse --show-toplevel`"
+fi
+name="${current_repo##*/}"; # basename
+name="${name%.git}.git"; # strip off any .git, and append a .git!
+
+remote_uri="`create_remote_repo "$name"`"
+create_tracking_branch "$remote_uri"
+exit $?
+
+
