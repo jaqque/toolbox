@@ -2,23 +2,29 @@
 # (C) 2013 John H. Robinson, IV <jhriv@sbih.org>
 # Ease manually patching Debian and Ubuntu systems
 
-
-if [ -x `which lsb_release` ]; then
-  case "`lsb_release --id --short`" in
-    Ubuntu) apt=/usr/bin/apt-get  ;;
-    Debian) apt=/usr/bin/aptitude ;;
-    *)      apt=/usr/bin/aptitude ;;
-  esac
-else
-  apt=/usr/bin/aptitude
+release='Unknown'
+if [ -x "`which lsb_release`" ]; then
+  release="`lsb_release --id --short`"
 fi
+
+case $release in
+  Ubuntu) apt=/usr/bin/apt-get  ;;
+  Debian) apt=/usr/bin/aptitude ;;
+  *)      apt=/usr/bin/aptitude ;;
+esac
+
+# $APT environmental variable rules all.
 apt=${APT:-$apt}
 
+case "$apt" in
+  *apt-get)  full_upgrade='dist-upgrade' ;;
+  *aptitude) full_upgrade='full-upgrade' ;;
+  *)         full_upgrade='dist-upgrade' ;;
+esac
 
 usage() {
-me=`basename $0`
 cat <<EOF
-$me [-u|--upgrade|-f|--full-upgrade|-c|--clean|-h|--help]
+${0##*/} [-u|--upgrade|-f|--full-upgrade|-c|--clean|-h|--help]
 
   Download updated packages, and optionally install them.
 
@@ -48,7 +54,7 @@ case "$1" in
     -c|--clean)    exec $sudo "$apt" clean ;;
     -u|--upgrade)  exec $sudo "$apt" upgrade ;;
     -d|--dist-upgrade|-f|--full-upgrade)
-                   exec $sudo "$apt" full-upgrade ;;
+                   exec $sudo "$apt" $full_upgrade ;;
     -h|--help)     usage; exit 0 ;;
     ?*)            usage; exit 1 ;;
 esac
@@ -61,12 +67,12 @@ $sudo "$apt" update
 $sudo "$apt" --download-only --assume-yes upgrade
 
 read -p 'Press [RETURN] to download full-updates... ' junk
-$sudo "$apt" --download-only --assume-yes full-upgrade
+$sudo "$apt" --download-only --assume-yes $full_upgrade
 
 read -p 'Upgrade, Full-upgrade, or Neither? [ufN] ' action
 case $action in
     u*|U*)       exec $sudo "$apt" upgrade ;;
-    d*|D*|f*|F*) exec $sudo "$apt" full-upgrade ;;
+    d*|D*|f*|F*) exec $sudo "$apt" $full_upgrade ;;
 esac
 
 exit 0
