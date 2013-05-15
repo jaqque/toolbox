@@ -66,8 +66,25 @@ $sudo "$apt" update
 # read -p 'Press [RETURN] to download updates... ' junk
 $sudo "$apt" --download-only --assume-yes upgrade
 
-read -p 'Press [RETURN] to download full-updates... ' junk
+if [ -t 0 ]; then
+	read -p 'Press [RETURN] to download full-updates... ' junk
+else
+	cat <<-EOF
+
+	Lacking a terminal, I am downloading the full-updates anyway.
+
+	EOF
+fi
 $sudo "$apt" --download-only --assume-yes $full_upgrade
+
+if [ ! -t 0 ]; then
+	cat <<-EOF
+	
+	Cravenly reusing to continue install until you have a terminal.
+	Try ssh -t.
+	EOF
+	exit
+fi
 
 read -p 'Upgrade, Full-upgrade, or Neither? [ufN] ' action
 case $action in

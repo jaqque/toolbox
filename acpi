@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# acpi capitalises battery status
+capitalise='s/d(ischarging)/D\1/; s/ c(harging)/ C\1/'
+
+# \1="Battery"; \2=ID; \3=percentage; \4=status;
+format='s/.*(Battery)-([0-9]*).([0-9]+%); ([^;]*);/\1 \2: \4, \3,/'
+
+/usr/bin/pmset -g batt | sed -n -E "$capitalise; ${format}p"
